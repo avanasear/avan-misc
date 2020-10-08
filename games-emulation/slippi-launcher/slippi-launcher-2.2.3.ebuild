@@ -75,9 +75,6 @@ src_compile() {
 }
 
 src_install() {
-	cp -r -n Data/Sys/ /usr/local/bin
-	cp -r -n ./build/User /usr/local/bin
-	cp -n ./build/traversal_server /usr/local/bin
 	touch /usr/local/bin/build/Binaries/portable.txt
 
 	pushd build
@@ -86,6 +83,10 @@ src_install() {
 }
 
 pkg_postinst() {
+	echo "You will need to do the following in order for Slippi to actually run..."
+	echo "cp -r -n Data/Sys/ /usr/local/bin"
+	echo "cp -r -n ./build/User /usr/local/bin"
+	echo "cp -n ./build/traversal_server /usr/local/bin"
 	xdg_icon_cache_update
 }
 
