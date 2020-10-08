@@ -42,7 +42,7 @@ SRC_URI="https://github.com/project-slippi/Ishiiruka/archive/v2.2.3.tar.gz"
 # License of the package.  This must match the name of file(s) in the
 # licenses/ directory.  For complex license combination see the developer
 # docs on gentoo.org for details.
-LICENSE=""
+LICENSE="GPL-2"
 
 # The SLOT variable is used to tell Portage if it's OK to keep multiple
 # versions of the same package installed at the same time.  For example,
@@ -107,7 +107,7 @@ IUSE=""
 
 # The following src_configure function is implemented as default by portage, so
 # you only need to call it if you need a different behaviour.
-#src_configure() {
+src_configure() {
 	# Most open-source packages use GNU autoconf for configuration.
 	# The default, quickest (and preferred) way of running configure is:
 	#econf
@@ -126,11 +126,15 @@ IUSE=""
 	# Note the use of --infodir and --mandir, above. This is to make
 	# this package FHS 2.2-compliant.  For more information, see
 	#   https://wiki.linuxfoundation.org/lsb/fhs
-#}
+	mkdir -p build || die
+	pushd build
+	cmake ${CMAKE_FLAGS} ../ || die
+	popd
+}
 
 # The following src_compile function is implemented as default by portage, so
 # you only need to call it, if you need different behaviour.
-#src_compile() {
+src_compile() {
 	# emake is a script that calls the standard GNU make with parallel
 	# building options for speedier builds (especially on SMP systems).
 	# Try emake first.  It might not work for some packages, because
@@ -140,16 +144,22 @@ IUSE=""
 	# worked around.
 
 	#emake
-#}
+	pushd build
+	emake || die
+	popd
+}
 
 # The following src_install function is implemented as default by portage, so
 # you only need to call it, if you need different behaviour.
-#src_install() {
+src_install() {
 	# You must *personally verify* that this trick doesn't install
 	# anything outside of DESTDIR; do this by reading and
 	# understanding the install part of the Makefiles.
 	# This is the preferred way to install.
-	#emake DESTDIR="${D}" install
+	cp -r -n Data/Sys/ build/Binaries/
+	touch ./build/Binaries/portable.txt
+
+	emake DESTDIR="${D}" install
 
 	# When you hit a failure with emake, do not just use make. It is
 	# better to fix the Makefiles to allow proper parallelization.
@@ -168,4 +178,4 @@ IUSE=""
 	#	install
 	# Again, verify the Makefiles!  We don't want anything falling
 	# outside of ${D}.
-#}
+}
