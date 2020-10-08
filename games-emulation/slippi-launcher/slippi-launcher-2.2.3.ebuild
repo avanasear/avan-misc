@@ -33,5 +33,7 @@ src_install() {
 	cp -r -n Data/Sys/ build/Binaries/
 	touch ./build/Binaries/portable.txt
 
-	emake DESTDIR="${D}" install/local
+	pushd build
+	emake DESTDIR="${D}" install/local || die
+	popd
 }
