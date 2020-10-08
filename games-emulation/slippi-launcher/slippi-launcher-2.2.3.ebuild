@@ -3,12 +3,8 @@
 
 EAPI=7
 
-
-inherit cmake desktop xdg-utils l10n pax-utils
-
 DESCRIPTION="Slippi launcher for Super Smash Brothers Melee"
 HOMEPAGE="https://slippi.gg"
-
 SRC_URI="https://github.com/project-slippi/Ishiiruka/archive/v2.2.3.tar.gz"
 
 S="${WORKDIR}/Ishiiruka-${PV}"
@@ -16,142 +12,26 @@ S="${WORKDIR}/Ishiiruka-${PV}"
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="~amd64"
-IUSE="alsa bluetooth discord-presense doc +evdev ffmpeg log lto profile pulseaudio +qt5 systemd upnp"
 
-RDEPEND="
-	dev-libs/hidapi:0=
-	dev-libs/libfmt:0=
-	dev-libs/lzo:2=
-	dev-libs/pugixml:0=
-	media-libs/libpng:0=
-	media-libs/libsfml
-	media-libs/mesa[egl]
-	net-libs/enet:1.3
-	net-libs/mbedtls:0=
-	net-misc/curl:0=
-	sys-libs/readline:0=
-	sys-libs/zlib:0=
-	x11-libs/libXext
-	x11-libs/libXi
-	x11-libs/libXrandr
-	virtual/libusb:1
-	virtual/opengl
-	alsa? ( media-libs/alsa-lib )
-	bluetooth? ( net-wireless/bluez )
-	evdev? (
-		dev-libs/libevdev
-		virtual/udev
-	)
-	ffmpeg? ( media-video/ffmpeg:= )
-	profile? ( dev-util/oprofile )
-	pulseaudio? ( media-sound/pulseaudio )
-	qt5? (
-		dev-qt/qtcore:5
-		dev-qt/qtgui:5
-		dev-qt/qtwidgets:5
-	)
-	systemd? ( sys-apps/systemd:0= )
-	upnp? ( net-libs/miniupnpc )
-	media-libs/vulkan-loader
-"
-DEPEND="${RDEPEND}"
-BDEPEND="
-    sys-devel/gettext
-	virtual/pkgconfig
-"
-
-CMAKE_FLAGS = "${CMAKE_FLAGS} -DLINUX_LOCAL_DEV=true"
-
-src_prepare() {
-	cmake_src_prepare
-
-	local KEEP_SOURCES=(
-		Bochs_disasm
-		FreeSurround
-		Vulkan # dolphin bug #729832
-		cpp-optparse
-		glslang
-		imgui
-		xxhash # dolphin FIXME: xxhash can't be found by cmake
-		minizip
-		soundtouch
-		cubeb
-		discord-rpc
-		gtest
-		picojson
-		zstd
-	)
-	local s
-	for s in "${KEEP_SOURCES[@]}"; do
-		mv -v "Externals/${s}" . || die
-	done
-	einfo "removing sources: $(echo Externals/*)"
-	rm -r Externals/* || die "Failed to delete Externals dir."
-	for s in "${KEEP_SOURCES[@]}"; do
-		mv -v "#{s}" "Externals/" || die
-	done
-
-	remove_locale() {
-		# Ensure preservation of the backup locale when no valid LINGUA is set
-		if [[ "${PLOCALE_BACKUP}" == "${1}" ]] && [[ "${PLOCALE_BACKUP}" == "$(l10n_get_locales)" ]]; then
-			return
-		else
-			rm "Languages/po/${1}.po" || die
-		fi
-	}
-
-	l10n_find_plocales_changes "Languages/po/" "" '.po'
-	l10n_for_each_disabled_locale_do remove_locale
-}
+IUSE=""
 
 src_configure() {
-	local mycmakeargs=(
-		# Use ccache only when user did set FEATURES=ccache (or similar)
-		# not when ccache binary is present in system (automagic).
-		-DCCACHE_BIN=CCACHE_BIN-NOTFOUND
-		-DENABLE_ALSA=$(usex alsa)
-		-DENABLE_BLUEZ=$(usex bluetooth)
-		-DENABLE_EVDEV=$(usex evdev)
-		-DENCODE_FRAMEDUMPS=$(usex ffmpeg)
-		-DENABLE_LLVM=OFF
-		-DENABLE_LTO=$(usex lto)
-		-DENABLE_PULSEAUDIO=$(usex pulseaudio)
-		-DENABLE_QT=$(usex qt5)
-		-DENABLE_SDL=OFF # not supported: #666558
-		-DFASTLOG=$(usex log)
-		-DOPROFILING=$(usex profile)
-		-DUSE_DISCORD_PRESENCE=$(usex discord-presence)
-		-DUSE_SHARED_ENET=ON
-		-DUSE_UPNP=$(usex upnp)
+	CMAKE_FLAGS = "${CMAKE_FLAGS} -DLINUX_LOCAL_DEV=true"
+	mkdir -p build || die
+	pushd build
+	cmake ${CMAKE_FLAGS} ../ || die
+	popd
+}
 
-		# Undo cmake-utils.eclass's defaults.
-		# All dolphin's libraries are private
-		# and rely on circular dependency resolution.
-		-DBUILD_SHARED_LIBS=OFF
-	)
-
-	cmake_src_configure
+src_compile() {
+	pushd build
+	emake || die
+	popd
 }
 
 src_install() {
-	cmake_src_install
+	cp -r -n Data/Sys/ build/Binaries/
+	touch ./build/Binaries/portable.txt
 
-	dodoc Readme.md
-	if use doc; then
-		dodoc -r docs/ActionReplay docs/DSP docs/WiiMote
-	fi
-
-	doicon -s 48 Data/dolphin-emu.png
-	doicon -s scalable Data/dolphin-emu.svg
-	doicon Data/dolphin-emu.svg
-}
-
-pkg_postinst() {
-	# Add pax markings for hardened systems
-	pax-mark -m "${EPREFIX}"/usr/games/bin/"${PN}"-emu
-	xdg_icon_cache_update
-}
-
-pkg_postrm() {
-	xdg_icon_cache_update
+	emake DESTDIR="${D}" install
 }
