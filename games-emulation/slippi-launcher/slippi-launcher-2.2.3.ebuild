@@ -16,7 +16,7 @@ KEYWORDS="~amd64"
 IUSE=""
 
 src_configure() {
-	CMAKE_FLAGS = "${CMAKE_FLAGS} -DLINUX_LOCAL_DEV=true"
+	CMAKE_FLAGS="${CMAKE_FLAGS} -DLINUX_LOCAL_DEV=true"
 	mkdir -p build || die
 	pushd build
 	cmake ${CMAKE_FLAGS} ../ || die
