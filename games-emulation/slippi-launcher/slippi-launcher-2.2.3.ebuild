@@ -76,6 +76,8 @@ src_compile() {
 
 src_install() {
 	cp -r -n Data/Sys/ /usr/local/bin
+	cp -r -n ./build/User /usr/local/bin
+	cp -n ./build/traversal_server /usr/local/bin
 	touch /usr/local/bin/build/Binaries/portable.txt
 
 	pushd build
