@@ -34,6 +34,6 @@ src_install() {
 	touch ./build/Binaries/portable.txt
 
 	pushd build
-	emake DESTDIR="${D}" install/local || die
+	emake DESTDIR="${D}" install || die
 	popd
 }
