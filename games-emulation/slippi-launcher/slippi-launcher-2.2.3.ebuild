@@ -1,181 +1,157 @@
 # Copyright 1999-2020 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-# NOTE: The comments in this file are for instruction and documentation.
-# They're not meant to appear with your final, production ebuild.  Please
-# remember to remove them before submitting or committing your ebuild.  That
-# doesn't mean you can't add your own comments though.
-
-# The EAPI variable tells the ebuild format in use.
-# It is suggested that you use the latest EAPI approved by the Council.
-# The PMS contains specifications for all EAPIs. Eclasses will test for this
-# variable if they need to use features that are not universal in all EAPIs.
-# If an eclass doesn't support latest EAPI, use the previous EAPI instead.
 EAPI=7
 
 
-# inherit lists eclasses to inherit functions from. For example, an ebuild
-# that needs the eautoreconf function from autotools.eclass won't work
-# without the following line:
-#inherit autotools
-#
-# Eclasses tend to list descriptions of how to use their functions properly.
-# Take a look at the eclass/ directory for more examples.
+inherit cmake desktop xdg-utils l10n pax-utils
 
-# Short one-line description of this package.
 DESCRIPTION="Slippi launcher for Super Smash Brothers Melee"
-
-# Homepage, not used by Portage directly but handy for developer reference
 HOMEPAGE="https://slippi.gg"
 
-# Point to any required sources; these will be automatically downloaded by
-# Portage.
 SRC_URI="https://github.com/project-slippi/Ishiiruka/archive/v2.2.3.tar.gz"
 
-# Source directory; the dir where the sources can be found (automatically
-# unpacked) inside ${WORKDIR}.  The default value for S is ${WORKDIR}/${P}
-# If you don't need to change it, leave the S= line out of the ebuild
-# to keep it tidy.
-#S="${WORKDIR}/${P}"
+S="${WORKDIR}/Ishiiruka-${PV}"
 
-
-# License of the package.  This must match the name of file(s) in the
-# licenses/ directory.  For complex license combination see the developer
-# docs on gentoo.org for details.
 LICENSE="GPL-2"
-
-# The SLOT variable is used to tell Portage if it's OK to keep multiple
-# versions of the same package installed at the same time.  For example,
-# if we have a libfoo-1.2.2 and libfoo-1.3.2 (which is not compatible
-# with 1.2.2), it would be optimal to instruct Portage to not remove
-# libfoo-1.2.2 if we decide to upgrade to libfoo-1.3.2.  To do this,
-# we specify SLOT="1.2" in libfoo-1.2.2 and SLOT="1.3" in libfoo-1.3.2.
-# emerge clean understands SLOTs, and will keep the most recent version
-# of each SLOT and remove everything else.
-# Note that normal applications should use SLOT="0" if possible, since
-# there should only be exactly one version installed at a time.
-# Do not use SLOT="", because the SLOT variable must not be empty.
 SLOT="0"
-
-# Using KEYWORDS, we can record masking information *inside* an ebuild
-# instead of relying on an external package.mask file.  Right now, you
-# should set the KEYWORDS variable for every ebuild so that it contains
-# the names of all the architectures with which the ebuild works.
-# All of the official architectures can be found in the arch.list file
-# which is in the profiles/ directory.  Usually you should just set this
-# to "~amd64".  The ~ in front of the architecture indicates that the
-# package is new and should be considered unstable until testing proves
-# its stability.  So, if you've confirmed that your ebuild works on
-# amd64 and ppc, you'd specify:
-# KEYWORDS="~amd64 ~ppc"
-# Once packages go stable, the ~ prefix is removed.
-# For binary packages, use -* and then list the archs the bin package
-# exists for.  If the package was for an x86 binary package, then
-# KEYWORDS would be set like this: KEYWORDS="-* x86"
-# Do not use KEYWORDS="*"; this is not valid in an ebuild context.
 KEYWORDS="~amd64"
+IUSE="alsa bluetooth discord-presense doc +evdev ffmpeg log lto profile pulseaudio +qt5 systemd upnp"
 
-# Comprehensive list of any and all USE flags leveraged in the ebuild,
-# with some exceptions, e.g., ARCH specific flags like "amd64" or "ppc".
-# Not needed if the ebuild doesn't use any USE flags.
-IUSE=""
+RDEPEND="
+	dev-libs/hidapi:0=
+	dev-libs/libfmt:0=
+	dev-libs/lzo:2=
+	dev-libs/pugixml:0=
+	media-libs/libpng:0=
+	media-libs/libsfml
+	media-libs/mesa[egl]
+	net-libs/enet:1.3
+	net-libs/mbedtls:0=
+	net-misc/curl:0=
+	sys-libs/readline:0=
+	sys-libs/zlib:0=
+	x11-libs/libXext
+	x11-libs/libXi
+	x11-libs/libXrandr
+	virtual/libusb:1
+	virtual/opengl
+	alsa? ( media-libs/alsa-lib )
+	bluetooth? ( net-wireless/bluez )
+	evdev? (
+		dev-libs/libevdev
+		virtual/udev
+	)
+	ffmpeg? ( media-video/ffmpeg:= )
+	profile? ( dev-util/oprofile )
+	pulseaudio? ( media-sound/pulseaudio )
+	qt5? (
+		dev-qt/qtcore:5
+		dev-qt/qtgui:5
+		dev-qt/qtwidgets:5
+	)
+	systemd? ( sys-apps/systemd:0= )
+	upnp? ( net-libs/miniupnpc )
+	media-libs/vulkan-loader
+"
+DEPEND="${RDEPEND}"
+BDEPEND="
+    sys-devel/gettext
+	virtual/pkgconfig
+"
 
-# A space delimited list of portage features to restrict. man 5 ebuild
-# for details.  Usually not needed.
-#RESTRICT="strip"
+CMAKE_FLAGS = "${CMAKE_FLAGS} -DLINUX_LOCAL_DEV=true"
 
+src_prepare() {
+	cmake_src_prepare
 
-# Run-time dependencies. Must be defined to whatever this depends on to run.
-# Example:
-#    ssl? ( >=dev-libs/openssl-1.0.2q:0= )
-#    >=dev-lang/perl-5.24.3-r1
-# It is advisable to use the >= syntax show above, to reflect what you
-# had installed on your system when you tested the package.  Then
-# other users hopefully won't be caught without the right version of
-# a dependency.
-#RDEPEND=""
+	local KEEP_SOURCES=(
+		Bochs_disasm
+		FreeSurround
+		Vulkan # dolphin bug #729832
+		cpp-optparse
+		glslang
+		imgui
+		xxhash # dolphin FIXME: xxhash can't be found by cmake
+		minizip
+		soundtouch
+		cubeb
+		discord-rpc
+		gtest
+		picojson
+		zstd
+	)
+	local s
+	for s in "${KEEP_SOURCES[@]}"; do
+		mv -v "Externals/${s}" . || die
+	done
+	einfo "removing sources: $(echo Externals/*)"
+	rm -r Externals/* || die "Failed to delete Externals dir."
+	for s in "${KEEP_SOURCES[@]}"; do
+		mv -v "#{s}" "Externals/" || die
+	done
 
-# Build-time dependencies that need to be binary compatible with the system
-# being built (CHOST). These include libraries that we link against.
-# The below is valid if the same run-time depends are required to compile.
-#DEPEND="${RDEPEND}"
+	remove_locale() {
+		# Ensure preservation of the backup locale when no valid LINGUA is set
+		if [[ "${PLOCALE_BACKUP}" == "${1}" ]] && [[ "${PLOCALE_BACKUP}" == "$(l10n_get_locales)" ]]; then
+			return
+		else
+			rm "Languages/po/${1}.po" || die
+		fi
+	}
 
-# Build-time dependencies that are executed during the emerge process, and
-# only need to be present in the native build system (CBUILD). Example:
-#BDEPEND="virtual/pkgconfig"
+	l10n_find_plocales_changes "Languages/po/" "" '.po'
+	l10n_for_each_disabled_locale_do remove_locale
+}
 
-
-# The following src_configure function is implemented as default by portage, so
-# you only need to call it if you need a different behaviour.
 src_configure() {
-	# Most open-source packages use GNU autoconf for configuration.
-	# The default, quickest (and preferred) way of running configure is:
-	#econf
-	#
-	# You could use something similar to the following lines to
-	# configure your package before compilation.  The "|| die" portion
-	# at the end will stop the build process if the command fails.
-	# You should use this at the end of critical commands in the build
-	# process.  (Hint: Most commands are critical, that is, the build
-	# process should abort if they aren't successful.)
-	#./configure \
-	#	--host=${CHOST} \
-	#	--prefix=/usr \
-	#	--infodir=/usr/share/info \
-	#	--mandir=/usr/share/man || die
-	# Note the use of --infodir and --mandir, above. This is to make
-	# this package FHS 2.2-compliant.  For more information, see
-	#   https://wiki.linuxfoundation.org/lsb/fhs
-	mkdir -p build || die
-	pushd build
-	cmake ${CMAKE_FLAGS} ../ || die
-	popd
+	local mycmakeargs=(
+		# Use ccache only when user did set FEATURES=ccache (or similar)
+		# not when ccache binary is present in system (automagic).
+		-DCCACHE_BIN=CCACHE_BIN-NOTFOUND
+		-DENABLE_ALSA=$(usex alsa)
+		-DENABLE_BLUEZ=$(usex bluetooth)
+		-DENABLE_EVDEV=$(usex evdev)
+		-DENCODE_FRAMEDUMPS=$(usex ffmpeg)
+		-DENABLE_LLVM=OFF
+		-DENABLE_LTO=$(usex lto)
+		-DENABLE_PULSEAUDIO=$(usex pulseaudio)
+		-DENABLE_QT=$(usex qt5)
+		-DENABLE_SDL=OFF # not supported: #666558
+		-DFASTLOG=$(usex log)
+		-DOPROFILING=$(usex profile)
+		-DUSE_DISCORD_PRESENCE=$(usex discord-presence)
+		-DUSE_SHARED_ENET=ON
+		-DUSE_UPNP=$(usex upnp)
+
+		# Undo cmake-utils.eclass's defaults.
+		# All dolphin's libraries are private
+		# and rely on circular dependency resolution.
+		-DBUILD_SHARED_LIBS=OFF
+	)
+
+	cmake_src_configure
 }
 
-# The following src_compile function is implemented as default by portage, so
-# you only need to call it, if you need different behaviour.
-src_compile() {
-	# emake is a script that calls the standard GNU make with parallel
-	# building options for speedier builds (especially on SMP systems).
-	# Try emake first.  It might not work for some packages, because
-	# some makefiles have bugs related to parallelism, in these cases,
-	# use emake -j1 to limit make to a single process.  The -j1 is a
-	# visual clue to others that the makefiles have bugs that have been
-	# worked around.
-
-	#emake
-	pushd build
-	emake || die
-	popd
-}
-
-# The following src_install function is implemented as default by portage, so
-# you only need to call it, if you need different behaviour.
 src_install() {
-	# You must *personally verify* that this trick doesn't install
-	# anything outside of DESTDIR; do this by reading and
-	# understanding the install part of the Makefiles.
-	# This is the preferred way to install.
-	cp -r -n Data/Sys/ build/Binaries/
-	touch ./build/Binaries/portable.txt
+	cmake_src_install
 
-	emake DESTDIR="${D}" install
+	dodoc Readme.md
+	if use doc; then
+		dodoc -r docs/ActionReplay docs/DSP docs/WiiMote
+	fi
 
-	# When you hit a failure with emake, do not just use make. It is
-	# better to fix the Makefiles to allow proper parallelization.
-	# If you fail with that, use "emake -j1", it's still better than make.
+	doicon -s 48 Data/dolphin-emu.png
+	doicon -s scalable Data/dolphin-emu.svg
+	doicon Data/dolphin-emu.svg
+}
 
-	# For Makefiles that don't make proper use of DESTDIR, setting
-	# prefix is often an alternative.  However if you do this, then
-	# you also need to specify mandir and infodir, since they were
-	# passed to ./configure as absolute paths (overriding the prefix
-	# setting).
-	#emake \
-	#	prefix="${D}"/usr \
-	#	mandir="${D}"/usr/share/man \
-	#	infodir="${D}"/usr/share/info \
-	#	libdir="${D}"/usr/$(get_libdir) \
-	#	install
-	# Again, verify the Makefiles!  We don't want anything falling
-	# outside of ${D}.
+pkg_postinst() {
+	# Add pax markings for hardened systems
+	pax-mark -m "${EPREFIX}"/usr/games/bin/"${PN}"-emu
+	xdg_icon_cache_update
+}
+
+pkg_postrm() {
+	xdg_icon_cache_update
 }
